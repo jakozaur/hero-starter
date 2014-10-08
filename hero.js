@@ -1,4 +1,4 @@
-/* 
+/*
 
   The only function that is required in this file is the "move" function
 
@@ -9,8 +9,8 @@
 
   The "move" function must return "North", "South", "East", "West", or "Stay"
   (Anything else will be interpreted by the game as "Stay")
-  
-  The "move" function should accept two arguments that the website will be passing in: 
+
+  The "move" function should accept two arguments that the website will be passing in:
     - a "gameData" object which holds all information about the current state
       of the battle
 
@@ -81,27 +81,49 @@
 
 // // The "Safe Diamond Miner"
 var move = function(gameData, helpers) {
-  var myHero = gameData.activeHero;
+  var board = gameData.board;
+  var hero = gameData.activeHero;
 
   //Get stats on the nearest health well
-  var healthWellStats = helpers.findNearestObjectDirectionAndDistance(gameData.board, myHero, function(boardTile) {
+  var healthWellStats = helpers.findNearestObjectDirectionAndDistance(board, hero, function(boardTile) {
     if (boardTile.type === 'HealthWell') {
       return true;
     }
   });
   var distanceToHealthWell = healthWellStats.distance;
   var directionToHealthWell = healthWellStats.direction;
-  
 
-  if (myHero.health < 40) {
+  var enemyStats = helpers.findNearestObjectDirectionAndDistance(board, hero, function(enemyTile) {
+    return enemyTile.type === 'Hero' && enemyTile.team !== hero.team && enemyTile.health <= hero.health;
+  });
+
+  var diamondStats = helpers.findNearestObjectDirectionAndDistance(board, hero, function(mineTile) {
+    if (mineTile.type === 'DiamondMine') {
+      if (mineTile.owner) {
+        return mineTile.owner.team !== hero.team;
+      } else {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  }, board);
+
+
+  if (hero.health < 40) {
     //Heal no matter what if low health
     return directionToHealthWell;
-  } else if (myHero.health < 100 && distanceToHealthWell === 1) {
+  } else if (hero.health < 100 && distanceToHealthWell === 1) {
     //Heal if you aren't full health and are close to a health well already
     return directionToHealthWell;
   } else {
-    //If healthy, go capture a diamond mine!
-    return helpers.findNearestNonTeamDiamondMine(gameData);
+    if (enemyStats && (enemyStats.distance < diamondStats.distance || !diamondStats)) {
+      return enemyStats.direction;
+    } else if (diamondStats) {
+      return diamondStats.direction;
+    } else {
+      return directionToHealthWell;
+    }
   }
 };
 
